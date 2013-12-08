@@ -1,4 +1,4 @@
-#-------------------------------------------------------------------------------
+﻿#-------------------------------------------------------------------------------
 # Name:        module1
 # Purpose:
 #
@@ -47,12 +47,41 @@ class ResultTabWidget(QtGui.QTabWidget):
         self.addTab(self.circulation_graph,"循環分布")
         self.addTab(self.bending_graph,"たわみ")
 
+class ExeExportButton(QtGui.QWidget):
+    def __init__(self, parent = None):
+        QtGui.QWidget.__init__(self, parent = parent)
+
+        self.exebutton = QtGui.QPushButton("exe",parent = self)
+        self.exportbutton = QtGui.QPushButton("export",parent = self)
+        self.do_stracutual = QtGui.QCheckBox("構造考慮",parent = self)
+
+        layout = QtGui.QHBoxLayout()
+        layout.addStretch(1)
+        layout.addWidget(self.do_stracutual)
+        layout.addWidget(self.exebutton)
+        layout.addWidget(self.exportbutton)
+
+        self.setLayout(layout)
+
+
 
 def main():
     qApp = QtGui.QApplication(sys.argv)
 
+    mainwindow = QtGui.QMainWindow()
+    mainpanel = QtGui.QWidget()
+
     resulttabwidget = ResultTabWidget()
-    resulttabwidget.show()
+    exeexportutton = ExeExportButton()
+
+    mainpanel_layout = QtGui.QVBoxLayout()
+    mainpanel_layout.addWidget(resulttabwidget)
+    mainpanel_layout.addWidget(exeexportutton)
+    mainpanel.setLayout(mainpanel_layout)
+    mainwindow.setCentralWidget(mainpanel)
+
+
+    mainwindow.show()
     #dataplot.drowplot([[0],[1]],[[1],[2]])
     sys.exit(qApp.exec_())
 
