@@ -140,12 +140,13 @@ class SettingWidget(QtGui.QGroupBox):
         self.layout.addWidget(self.EIinput)
         self.setLayout(self.layout)
 
-class EIsettingWidget(QtGui.QTabWidget):
-    def __init__(self, parent = None):
-        QtGui.QTabWidget.__init__(self, parent = parent)
+class EIsettingWidget(QtGui.QDialog):
+    def __init__(self, tablewidget, parent = None):
+        QtGui.QDialog.__init__(self, parent = parent)
         self.setFixedSize(600,170)
+        self.setModal(1)
+        self.tabwidget = QtGui.QTabWidget(parent = self)
 
-    def EIsetting(self,tablewidget):
         section_num = tablewidget.columnCount()-1
 
         self.EIinputWidget = [QtGui.QGroupBox(parent = self) for i in range(section_num)]
@@ -153,22 +154,51 @@ class EIsettingWidget(QtGui.QTabWidget):
             self.EIinputWidget[i].setTitle("第{num}翼の剛性と線密度を入力してください".format(num = i+1))
             self.EIinputWidget[i].EIinputtable = QtGui.QTableWidget(parent = self.EIinputWidget[i])
             self.EIinputWidget[i].EIinputtable.setColumnCount(5)
-            self.EIinputWidget[i].EIinputtable.setRowCount(2)
-            self.EIinputWidget[i].EIinputtable.setMaximumSize(700,100)
-            self.EIinputWidget[i].EIinputtable.setMinimumSize(400,100)
+            self.EIinputWidget[i].EIinputtable.setRowCount(3)
+            self.EIinputWidget[i].EIinputtable.setFixedSize(570,100)
+            hheader = self.EIinputWidget[i].EIinputtable.horizontalHeader();
+            hheader.setResizeMode(QtGui.QHeaderView.Stretch)
+            vheader = self.EIinputWidget[i].EIinputtable.verticalHeader();
+            vheader.setResizeMode(QtGui.QHeaderView.Stretch)
+
+            self.EIinputWidget[i].EIinputtable.setItem(0,0,QtGui.QTableWidgetItem("区切り[mm]"))
+            self.EIinputWidget[i].EIinputtable.setItem(1,0,QtGui.QTableWidgetItem("EI"))
+            self.EIinputWidget[i].EIinputtable.setItem(2,0,QtGui.QTableWidgetItem("線密度[kg/m]"))
+
             self.EIinputWidget[i].layout = QtGui.QVBoxLayout()
             self.EIinputWidget[i].layout.addWidget(self.EIinputWidget[i].EIinputtable)
             self.EIinputWidget[i].setLayout(self.EIinputWidget[i].layout)
-            self.addTab(self.EIinputWidget[i],"第{num}翼".format(num = i + 1))
+            self.tabwidget.addTab(self.EIinputWidget[i],"第{num}翼".format(num = i + 1))
 
+    def EIsetting(self,tablewidget):
+        section_num = tablewidget.columnCount()-1
+        i = section_num
 
+        if self.tabwidget.count() < section_num:
+            self.EIinputWidget.append(QtGui.QGroupBox(parent = self))
+            self.EIinputWidget[i].setTitle("第{num}翼の剛性と線密度を入力してください".format(num = i+1))
+            self.EIinputWidget[i].EIinputtable = QtGui.QTableWidget(parent = self.EIinputWidget[i])
+            self.EIinputWidget[i].EIinputtable.setColumnCount(5)
+            self.EIinputWidget[i].EIinputtable.setRowCount(3)
+            self.EIinputWidget[i].EIinputtable.setFixedSize(570,100)
+            hheader = self.EIinputWidget[i].EIinputtable.horizontalHeader();
+            hheader.setResizeMode(QtGui.QHeaderView.Stretch)
+            vheader = self.EIinputWidget[i].EIinputtable.verticalHeader();
+            vheader.setResizeMode(QtGui.QHeaderView.Stretch)
 
+            self.EIinputWidget[i].EIinputtable.setItem(0,0,QtGui.QTableWidgetItem("区切り[mm]"))
+            self.EIinputWidget[i].EIinputtable.setItem(1,0,QtGui.QTableWidgetItem("EI"))
+            self.EIinputWidget[i].EIinputtable.setItem(2,0,QtGui.QTableWidgetItem("線密度[kg/m]"))
 
+            self.EIinputWidget[i].layout = QtGui.QVBoxLayout()
+            self.EIinputWidget[i].layout.addWidget(self.EIinputWidget[i].EIinputtable)
+            self.EIinputWidget[i].setLayout(self.EIinputWidget[i].layout)
 
+            self.tabwidget.addTab(self.EIinputWidget[i],"第{num}翼".format(num = i))
 
-
-
-
+        elif self.tabwidget.count() > section_num:
+            self.tabwidget.removeTab(section_num)
+            self.EIinputWidget[section_num] = []
 
 def main():
 
@@ -195,7 +225,7 @@ def main():
     resulttabwidget = ResultTabWidget()
     exeexportutton = ExeExportButton()
     settingwidget = SettingWidget()
-    eisettingwidget = EIsettingWidget()
+    eisettingwidget = EIsettingWidget(settingwidget.tablewidget)
 
     mainpanel_layout = QtGui.QVBoxLayout()
     mainpanel_layout.addWidget(resulttabwidget)
@@ -209,7 +239,6 @@ def main():
     settingwidget.connect(settingwidget.tablewidget.insertcolumn,QtCore.SIGNAL('clicked()'),insertcolumn)
     settingwidget.connect(settingwidget.tablewidget.deletecolumn,QtCore.SIGNAL('clicked()'),deletecolumn)
     settingwidget.connect(settingwidget.EIinput.EIinputbutton,QtCore.SIGNAL('clicked()'),EIsettingshow)
-
 
     sys.exit(qApp.exec_())
 
