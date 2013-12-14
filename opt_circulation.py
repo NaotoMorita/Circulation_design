@@ -92,16 +92,21 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input.setLayout(self.lift_maxbending_input.layout)
 
         #桁剛性をインプットするウィジットを開くボタン
-        self.EIinputbutton = QtGui.QPushButton("EI setting",parent = self)
-
+        self.EIinput = QtGui.QFrame(parent = self)
+        self.EIinput.EIinputbutton = QtGui.QPushButton("EI setting",parent = self.EIinput)
+        self.EIinput.EIinputbutton.setFixedWidth(100)
+        self.EIinput.layout = QtGui.QHBoxLayout()
+        self.EIinput.layout.addStretch(1)
+        self.EIinput.layout.addWidget(self.EIinput.EIinputbutton)
+        self.EIinput.setLayout(self.EIinput.layout)
 
         #スパン設定及び分割数設定のためのテーブルウィジット
         self.tablewidget = QtGui.QTableWidget(parent = self)
         #sizeの設定
         self.tablewidget.setMaximumSize(1000,100)
-        self.tablewidget.setMinimumSize(500,100)
+        self.tablewidget.setMinimumSize(600,100)
         #行数、列数の設定
-        self.tablewidget.setColumnCount(5)
+        self.tablewidget.setColumnCount(6)
         self.tablewidget.setRowCount(2)
         #タイトル付け
         self.tablewidget.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem(""))
@@ -109,6 +114,7 @@ class SettingWidget(QtGui.QGroupBox):
         self.tablewidget.setHorizontalHeaderItem(2, QtGui.QTableWidgetItem("第2翼"))
         self.tablewidget.setHorizontalHeaderItem(3, QtGui.QTableWidgetItem("第3翼"))
         self.tablewidget.setHorizontalHeaderItem(4, QtGui.QTableWidgetItem("第4翼"))
+        self.tablewidget.setHorizontalHeaderItem(5, QtGui.QTableWidgetItem("第5翼"))
         self.tablewidget.setItem(0,0,QtGui.QTableWidgetItem("各翼終端位置(mm)"))
         self.tablewidget.setItem(1,0,QtGui.QTableWidgetItem("翼素分割数"))
         #表示に追従してセルの大きさが変化するよう設定
@@ -117,17 +123,70 @@ class SettingWidget(QtGui.QGroupBox):
         vheader = self.tablewidget.verticalHeader();
         vheader.setResizeMode(QtGui.QHeaderView.Stretch);
 
+        self.tablewidget.buttons = QtGui.QWidget(parent = self)
+        self.tablewidget.insertcolumn = QtGui.QPushButton("列追加",parent = self.tablewidget.buttons)
+        self.tablewidget.deletecolumn = QtGui.QPushButton("列削除",parent = self.tablewidget.buttons)
+        self.tablewidget.buttons.layout = QtGui.QHBoxLayout()
+        self.tablewidget.buttons.layout.addStretch(1)
+        self.tablewidget.buttons.layout.addWidget(self.tablewidget.insertcolumn)
+        self.tablewidget.buttons.layout.addWidget(self.tablewidget.deletecolumn)
+        self.tablewidget.buttons.setLayout(self.tablewidget.buttons.layout)
+
         #Widgetのレイアウトを設定
         self.layout = QtGui.QVBoxLayout()
         self.layout.addWidget(self.lift_maxbending_input)
+        self.layout.addWidget(self.tablewidget.buttons)
         self.layout.addWidget(self.tablewidget)
-        self.layout.addWidget(self.EIinputbutton)
+        self.layout.addWidget(self.EIinput)
         self.setLayout(self.layout)
+
+class EIsettingWidget(QtGui.QTabWidget):
+    def __init__(self, parent = None):
+        QtGui.QTabWidget.__init__(self, parent = parent)
+        self.setFixedSize(600,170)
+
+    def EIsetting(self,tablewidget):
+        section_num = tablewidget.columnCount()-1
+
+        self.EIinputWidget = [QtGui.QGroupBox(parent = self) for i in range(section_num)]
+        for i in range(section_num):
+            self.EIinputWidget[i].setTitle("第{num}翼の剛性と線密度を入力してください".format(num = i+1))
+            self.EIinputWidget[i].EIinputtable = QtGui.QTableWidget(parent = self.EIinputWidget[i])
+            self.EIinputWidget[i].EIinputtable.setColumnCount(5)
+            self.EIinputWidget[i].EIinputtable.setRowCount(2)
+            self.EIinputWidget[i].EIinputtable.setMaximumSize(700,100)
+            self.EIinputWidget[i].EIinputtable.setMinimumSize(400,100)
+            self.EIinputWidget[i].layout = QtGui.QVBoxLayout()
+            self.EIinputWidget[i].layout.addWidget(self.EIinputWidget[i].EIinputtable)
+            self.EIinputWidget[i].setLayout(self.EIinputWidget[i].layout)
+            self.addTab(self.EIinputWidget[i],"第{num}翼".format(num = i + 1))
+
+
+
+
+
+
 
 
 
 
 def main():
+
+    def insertcolumn():
+        insertnum = settingwidget.tablewidget.columnCount()
+        settingwidget.tablewidget.setColumnCount(insertnum+1)
+        settingwidget.tablewidget.setHorizontalHeaderItem(insertnum, QtGui.QTableWidgetItem("第{num}翼".format(num = insertnum)))
+    def deletecolumn():
+        deletenum = settingwidget.tablewidget.columnCount()
+        if deletenum != 2:
+            settingwidget.tablewidget.setColumnCount(deletenum-1)
+            hheader = settingwidget.tablewidget.horizontalHeader();
+            hheader.setResizeMode(QtGui.QHeaderView.Stretch);
+
+    def EIsettingshow():
+        eisettingwidget.EIsetting(settingwidget.tablewidget)
+        eisettingwidget.show()
+
     qApp = QtGui.QApplication(sys.argv)
 
     mainwindow = QtGui.QMainWindow()
@@ -136,6 +195,7 @@ def main():
     resulttabwidget = ResultTabWidget()
     exeexportutton = ExeExportButton()
     settingwidget = SettingWidget()
+    eisettingwidget = EIsettingWidget()
 
     mainpanel_layout = QtGui.QVBoxLayout()
     mainpanel_layout.addWidget(resulttabwidget)
@@ -145,6 +205,12 @@ def main():
     mainwindow.setCentralWidget(mainpanel)
 
     mainwindow.show()
+
+    settingwidget.connect(settingwidget.tablewidget.insertcolumn,QtCore.SIGNAL('clicked()'),insertcolumn)
+    settingwidget.connect(settingwidget.tablewidget.deletecolumn,QtCore.SIGNAL('clicked()'),deletecolumn)
+    settingwidget.connect(settingwidget.EIinput.EIinputbutton,QtCore.SIGNAL('clicked()'),EIsettingshow)
+
+
     sys.exit(qApp.exec_())
 
 if __name__ == '__main__':
