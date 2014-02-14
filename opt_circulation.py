@@ -76,10 +76,14 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input = QtGui.QWidget(parent = self)
         self.lift_maxbending_input.liftlabel = QtGui.QLabel("揚力(kgf) : ", parent = self.lift_maxbending_input)
         self.lift_maxbending_input.bendinglabel = QtGui.QLabel("  最大たわみ(mm) : ", parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.velocitylabel = QtGui.QLabel("  速度(m/s) : ", parent = self.lift_maxbending_input)
         self.lift_maxbending_input.liftinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.liftinput.setFixedWidth(25)
         self.lift_maxbending_input.liftinput.setText("95")
 
+        self.lift_maxbending_input.velocityinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.velocityinput.setFixedWidth(33)
+        self.lift_maxbending_input.velocityinput.setText("7.5")
         self.lift_maxbending_input.bendinginput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.bendinginput.setFixedWidth(33)
         self.lift_maxbending_input.bendinginput.setText("2000")
@@ -87,6 +91,8 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input.layout.addStretch(1)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.liftlabel)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.liftinput)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.velocitylabel)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.velocityinput)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.bendinglabel)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.bendinginput)
         self.lift_maxbending_input.setLayout(self.lift_maxbending_input.layout)
@@ -152,6 +158,12 @@ class SettingWidget(QtGui.QGroupBox):
         self.layout.addWidget(self.EIinput)
         self.setLayout(self.layout)
 
+class ResultValWidget(QtGui.QGroupBox):
+    def __init__(self, parent = None):
+        QtGui.QGroupBox.__init__(self, parent = parent)
+        self.setTitle("計算結果")
+
+
 class EIsettingWidget(QtGui.QDialog):
     def __init__(self, tablewidget, parent = None):
         QtGui.QDialog.__init__(self, parent = parent)
@@ -187,6 +199,65 @@ class EIsettingWidget(QtGui.QDialog):
             self.tabwidget.addTab(self.EIinputWidget[i],"第{num}翼".format(num = i + 1))
 
 
+class TR797_modified():
+    def __init__(self):
+        #リスト変数の定義
+        self.dy = 0.05
+
+        self.y_div = []
+        self.z_div = []
+        self.y = []
+        self.z = []
+        self.phi = []
+
+        self.ds = []
+
+        self.sigma = []
+        self.spar_weight = []
+        #sigma_wireは線密度＋ワイヤー引っ張りを考慮した下向きの[N/m]
+        self.sigma_wire = []
+
+        #多角形化行列
+        self.polize_mat = [[]]
+
+        #誘導速度行列
+        self.Q_ij = [[]]
+
+        #せん断力を積分によって求める行列
+        self.sh_mat = [[]]
+
+        #モーメントを積分によって求める行列
+        self.mo_mat = [[]]
+
+        #たわみ角を積分によって求める行列
+        #剛性値ベクトル
+        self.EI = []
+        self.vd_mat = []
+
+        #たわみを求める行列
+        self.v_mat = []
+
+        #構造制約行列B
+        self.B = [[]]
+
+        #揚力制約行列C
+        self.C = [[]]
+
+        #最適化行列A
+        self.A = [[]]
+
+        #最適循環値
+        self.gamma = []
+        #誘導速度見積もり
+        self.ind_vel = []
+
+    def prepare(self,settingwidget):
+        self.b = float(settingwidget.tablewidget.item(0,settingwidget.tablewidget.columnCount() - 1).text()) * 2
+
+    def matrix(self):
+        pass
+    def optimize(self):
+        pass
 
 
 def main():
@@ -216,6 +287,14 @@ def main():
             y_div.append([])
             spar_default_divpos.append([])
             y_div[i_wing] = float(readcelltext(settingwidget.tablewidget,0,i_wing + 1))
+            #サンプル桁剛性値
+            EIsample_list = [34375000000,36671000000,16774000000,8305800000,1864800000]
+            if i_wing >= 5:
+                EIsample_list.append(100000000)
+            #サンプル線密度
+            sigmasample_list = [0.377,0.357,0.284,0.245,0.0929]
+            if i_wing >= 5:
+                sigmasample_list.append(0.0800)
             #剛性設定ウィジットに表示する初期値のリスト
             if i_wing != 0:
                 spar_default_divpos[i_wing] = [(y_div[i_wing] - y_div[i_wing-1]) / 4,(y_div[i_wing] - y_div[i_wing-1]) / 2, (y_div[i_wing] - y_div[i_wing-1]) * 3 / 4, y_div[i_wing] - y_div[i_wing-1]]
@@ -223,9 +302,17 @@ def main():
                 spar_default_divpos[i_wing] = [(y_div[i_wing]) / 4,(y_div[i_wing]) / 2, (y_div[i_wing]) * 3 / 4,y_div[i_wing]]
             for i_spardiv in range(4):
                 eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(0,i_spardiv + 1,QtGui.QTableWidgetItem("{spar_div}".format(spar_div = spar_default_divpos[i_wing][i_spardiv])))
-        print(spar_default_divpos)
+                #桁剛性値サンプルのセット
+                eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(1,i_spardiv + 1,QtGui.QTableWidgetItem("{EI_sample}".format(EI_sample = EIsample_list[i_wing])))
+                #桁線密度サンプルのセット
+                eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(2,i_spardiv + 1,QtGui.QTableWidgetItem("{sigma_sample}".format(sigma_sample = sigmasample_list[i_wing])))
+
         eisettingwidget.show()
 
+    def resultshow():
+        pass
+    def calculation():
+        TR797_opt.prepare(settingwidget)
 
 
     qApp = QtGui.QApplication(sys.argv)
@@ -234,13 +321,16 @@ def main():
     mainpanel = QtGui.QWidget()
 
     resulttabwidget = ResultTabWidget()
-    exeexportutton = ExeExportButton()
+    exeexportbutton = ExeExportButton()
     settingwidget = SettingWidget()
+    resultvalwidget = ResultValWidget(settingwidget.tablewidget)
     eisettingwidget = EIsettingWidget(settingwidget.tablewidget)
+    TR797_opt = TR797_modified()
 
     mainpanel_layout = QtGui.QVBoxLayout()
     mainpanel_layout.addWidget(resulttabwidget)
-    mainpanel_layout.addWidget(exeexportutton)
+    mainpanel_layout.addWidget(resultvalwidget)
+    mainpanel_layout.addWidget(exeexportbutton)
     mainpanel_layout.addWidget(settingwidget)
     mainpanel.setLayout(mainpanel_layout)
     mainwindow.setCentralWidget(mainpanel)
@@ -250,6 +340,7 @@ def main():
     settingwidget.connect(settingwidget.tablewidget.insertcolumn,QtCore.SIGNAL('clicked()'),insertcolumn)
     settingwidget.connect(settingwidget.tablewidget.deletecolumn,QtCore.SIGNAL('clicked()'),deletecolumn)
     settingwidget.connect(settingwidget.EIinput.EIinputbutton,QtCore.SIGNAL('clicked()'),EIsettingshow)
+    exeexportbutton.connect(exeexportbutton.exebutton,QtCore.SIGNAL('clicked()'),calculation)
 
     sys.exit(qApp.exec_())
 
