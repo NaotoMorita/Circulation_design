@@ -66,7 +66,7 @@ class ExeExportButton(QtGui.QWidget):
 class SettingWidget(QtGui.QGroupBox):
     def __init__(self, parent = None):
         QtGui.QGroupBox.__init__(self, parent = parent)
-        self.setTitle("設計変数")
+        self.setTitle("設計変数 　※各翼終端位置は計算精度確保のため10mm単位で入力のこと")
 
         #フォント設定
         font = QtGui.QFont()
@@ -76,17 +76,25 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input = QtGui.QWidget(parent = self)
         self.lift_maxbending_input.liftlabel = QtGui.QLabel("揚力(kgf) : ", parent = self.lift_maxbending_input)
         self.lift_maxbending_input.bendinglabel = QtGui.QLabel("  最大たわみ(mm) : ", parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.wireposlabel = QtGui.QLabel("  ワイヤー取付位置(mm) : ", parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.forcewirelabel = QtGui.QLabel("  ワイヤー下向引張(N) : ", parent = self.lift_maxbending_input)
         self.lift_maxbending_input.velocitylabel = QtGui.QLabel("  速度(m/s) : ", parent = self.lift_maxbending_input)
+
         self.lift_maxbending_input.liftinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.liftinput.setFixedWidth(25)
         self.lift_maxbending_input.liftinput.setText("95")
-
         self.lift_maxbending_input.velocityinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.velocityinput.setFixedWidth(33)
         self.lift_maxbending_input.velocityinput.setText("7.5")
         self.lift_maxbending_input.bendinginput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.bendinginput.setFixedWidth(33)
         self.lift_maxbending_input.bendinginput.setText("2000")
+        self.lift_maxbending_input.wireposinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.wireposinput.setFixedWidth(33)
+        self.lift_maxbending_input.wireposinput.setText("7000")
+        self.lift_maxbending_input.forcewireinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.forcewireinput.setFixedWidth(25)
+        self.lift_maxbending_input.forcewireinput.setText("400")
         self.lift_maxbending_input.layout = QtGui.QHBoxLayout()
         self.lift_maxbending_input.layout.addStretch(1)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.liftlabel)
@@ -95,6 +103,11 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.velocityinput)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.bendinglabel)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.bendinginput)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.wireposlabel)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.wireposinput)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.forcewirelabel)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.forcewireinput)
+
         self.lift_maxbending_input.setLayout(self.lift_maxbending_input.layout)
 
         #桁剛性をインプットするウィジットを開くボタン
@@ -109,11 +122,11 @@ class SettingWidget(QtGui.QGroupBox):
         #スパン設定及び分割数設定のためのテーブルウィジット
         self.tablewidget = QtGui.QTableWidget(parent = self)
         #sizeの設定
-        self.tablewidget.setMaximumSize(1000,100)
-        self.tablewidget.setMinimumSize(600,100)
+        self.tablewidget.setMaximumSize(1000,60)
+        self.tablewidget.setMinimumSize(600,60)
         #行数、列数の設定
         self.tablewidget.setColumnCount(6)
-        self.tablewidget.setRowCount(2)
+        self.tablewidget.setRowCount(1)
         #タイトル付け
         self.tablewidget.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem(""))
         self.tablewidget.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem("第1翼"))
@@ -122,16 +135,15 @@ class SettingWidget(QtGui.QGroupBox):
         self.tablewidget.setHorizontalHeaderItem(4, QtGui.QTableWidgetItem("第4翼"))
         self.tablewidget.setHorizontalHeaderItem(5, QtGui.QTableWidgetItem("第5翼"))
         self.tablewidget.setItem(0,0,QtGui.QTableWidgetItem("各翼終端位置(mm)"))
-        self.tablewidget.setItem(1,0,QtGui.QTableWidgetItem("翼素分割数"))
+        self.tablewidget.item(0,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+
 
         #初期値を設定
         for i in range(5):
             if i != 0:
                 self.tablewidget.setItem(0,i + 1,QtGui.QTableWidgetItem("{default_span}".format(default_span = 3400 * (i) + 1700)))
-                self.tablewidget.setItem(1,i + 1,QtGui.QTableWidgetItem("30"))
             else:
                 self.tablewidget.setItem(0,i + 1,QtGui.QTableWidgetItem("{default_span}".format(default_span = 1700)))
-                self.tablewidget.setItem(1,i + 1,QtGui.QTableWidgetItem("15"))
 
 
 
@@ -192,6 +204,9 @@ class EIsettingWidget(QtGui.QDialog):
             self.EIinputWidget[i].EIinputtable.setItem(0,0,QtGui.QTableWidgetItem("翼区切終端[mm]"))
             self.EIinputWidget[i].EIinputtable.setItem(1,0,QtGui.QTableWidgetItem("EI"))
             self.EIinputWidget[i].EIinputtable.setItem(2,0,QtGui.QTableWidgetItem("線密度[kg/m]"))
+            self.EIinputWidget[i].EIinputtable.item(0,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+            self.EIinputWidget[i].EIinputtable.item(1,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+            self.EIinputWidget[i].EIinputtable.item(2,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
 
             self.EIinputWidget[i].layout = QtGui.QVBoxLayout()
             self.EIinputWidget[i].layout.addWidget(self.EIinputWidget[i].EIinputtable)
@@ -202,15 +217,17 @@ class EIsettingWidget(QtGui.QDialog):
 class TR797_modified():
     def __init__(self):
         #リスト変数の定義
-        self.dy = 0.05
+        self.dy = 0.01
 
         self.y_div = []
         self.z_div = []
+        self.y_section = []
+        self.Ndiv_sec = []
         self.y = []
         self.z = []
         self.phi = []
 
-        self.ds = []
+        self.dS = []
 
         self.sigma = []
         self.spar_weight = []
@@ -252,7 +269,36 @@ class TR797_modified():
         self.ind_vel = []
 
     def prepare(self,settingwidget):
-        self.b = float(settingwidget.tablewidget.item(0,settingwidget.tablewidget.columnCount() - 1).text()) * 2
+        self.b = float(settingwidget.tablewidget.item(0,settingwidget.tablewidget.columnCount() - 1).text()) * 2 / 1000
+        self.n_section = int(settingwidget.tablewidget.columnCount()) - 1
+        self.max_tawami = float(settingwidget.lift_maxbending_input.bendinginput.text()) / 1000
+        self.y_wire = float(settingwidget.lift_maxbending_input.wireposinput.text()) / 1000
+        #セクションの区切りの位置
+        for n in range(self.n_section):
+            self.y_section.append(float(settingwidget.tablewidget.item(0,n + 1).text()) / 1000)
+
+        i = 0
+        j = 0
+        self.y_div.append(round(self.dy * (1),4))
+        while self.y_div[i] < self.b / 2:
+            self.y_div.append(round(self.dy * (i + 2),4))
+            if round(self.y_div[i],4) >= round(self.y_section[j],4) - self.dy / 2 and round(self.y_div[i],4) <= round(self.y_section[j],4) + self.dy / 2:
+                self.Ndiv_sec.append(i)
+                j = j + 1
+            if self.y_div[i] == self.y_wire:
+                self.Ndiv_wire = i
+            i = i + 1
+        print(self.y_div)
+        #パネル幅dSの作成
+        coe_tawami = self.max_tawami / (self.b / 2) ** 2
+        for n in range(len(self.y_div)):
+            self.z_div.append(coe_tawami * self.y_div[n] ** 2)
+            if n != 0:
+                self.dS.append(numpy.sqrt((self.y_div[n]-self.y_div[n-1])**2+(self.z_div[n]-self.z_div[n-1])**2))
+            else:
+                self.dS.append(numpy.sqrt(self.y_div[n]**2+self.z_div[n]**2))
+
+
 
     def matrix(self):
         pass
@@ -264,14 +310,43 @@ def main():
 
     def insertcolumn():
         insertnum = settingwidget.tablewidget.columnCount()
-        settingwidget.tablewidget.setColumnCount(insertnum+1)
+        settingwidget.tablewidget.setColumnCount(insertnum + 1)
         settingwidget.tablewidget.setHorizontalHeaderItem(insertnum, QtGui.QTableWidgetItem("第{num}翼".format(num = insertnum)))
+
+        i = insertnum-1
+        print(i)
+        eisettingwidget.EIinputWidget.append(QtGui.QGroupBox(parent = eisettingwidget))
+        print(eisettingwidget.EIinputWidget)
+        eisettingwidget.EIinputWidget[i].setTitle("第{num}翼の剛性と線密度を入力してください".format(num = i + 1))
+        eisettingwidget.EIinputWidget[i].EIinputtable = QtGui.QTableWidget(parent = eisettingwidget.EIinputWidget[i])
+        eisettingwidget.EIinputWidget[i].EIinputtable.setColumnCount(5)
+        eisettingwidget.EIinputWidget[i].EIinputtable.setRowCount(3)
+        eisettingwidget.EIinputWidget[i].EIinputtable.setFixedSize(570,100)
+        hheader = eisettingwidget.EIinputWidget[i].EIinputtable.horizontalHeader();
+        hheader.setResizeMode(QtGui.QHeaderView.Stretch)
+        vheader = eisettingwidget.EIinputWidget[i].EIinputtable.verticalHeader();
+        vheader.setResizeMode(QtGui.QHeaderView.Stretch)
+
+        eisettingwidget.EIinputWidget[i].EIinputtable.setItem(0,0,QtGui.QTableWidgetItem("翼区切終端[mm]"))
+        eisettingwidget.EIinputWidget[i].EIinputtable.setItem(1,0,QtGui.QTableWidgetItem("EI"))
+        eisettingwidget.EIinputWidget[i].EIinputtable.setItem(2,0,QtGui.QTableWidgetItem("線密度[kg/m]"))
+        eisettingwidget.EIinputWidget[i].EIinputtable.item(0,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+        eisettingwidget.EIinputWidget[i].EIinputtable.item(1,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+        eisettingwidget.EIinputWidget[i].EIinputtable.item(2,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+
+        eisettingwidget.EIinputWidget[i].layout = QtGui.QVBoxLayout()
+        eisettingwidget.EIinputWidget[i].layout.addWidget(eisettingwidget.EIinputWidget[i].EIinputtable)
+        eisettingwidget.EIinputWidget[i].setLayout(eisettingwidget.EIinputWidget[i].layout)
+        eisettingwidget.tabwidget.addTab(eisettingwidget.EIinputWidget[i],"第{num}翼".format(num = i + 1))
+
     def deletecolumn():
         deletenum = settingwidget.tablewidget.columnCount()
         if deletenum != 2:
             settingwidget.tablewidget.setColumnCount(deletenum-1)
             hheader = settingwidget.tablewidget.horizontalHeader();
             hheader.setResizeMode(QtGui.QHeaderView.Stretch);
+        eisettingwidget.tabwidget.removeTab(deletenum-2)
+        eisettingwidget.EIinputWidget.pop(deletenum-2)
 
     def EIsettingshow():
         def readcelltext(table, row, column):
@@ -280,33 +355,35 @@ def main():
                 celltext = cell.text()
                 return celltext
 
-        eisettingwidget.EIsetting(settingwidget.tablewidget)
         y_div = []
         spar_default_divpos = []
         for i_wing in range(settingwidget.tablewidget.columnCount() - 1):
             y_div.append([])
             spar_default_divpos.append([])
             y_div[i_wing] = float(readcelltext(settingwidget.tablewidget,0,i_wing + 1))
-            #サンプル桁剛性値
-            EIsample_list = [34375000000,36671000000,16774000000,8305800000,1864800000]
-            if i_wing >= 5:
-                EIsample_list.append(100000000)
-            #サンプル線密度
-            sigmasample_list = [0.377,0.357,0.284,0.245,0.0929]
-            if i_wing >= 5:
-                sigmasample_list.append(0.0800)
-            #剛性設定ウィジットに表示する初期値のリスト
-            if i_wing != 0:
-                spar_default_divpos[i_wing] = [(y_div[i_wing] - y_div[i_wing-1]) / 4,(y_div[i_wing] - y_div[i_wing-1]) / 2, (y_div[i_wing] - y_div[i_wing-1]) * 3 / 4, y_div[i_wing] - y_div[i_wing-1]]
-            else:
-                spar_default_divpos[i_wing] = [(y_div[i_wing]) / 4,(y_div[i_wing]) / 2, (y_div[i_wing]) * 3 / 4,y_div[i_wing]]
-            for i_spardiv in range(4):
-                eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(0,i_spardiv + 1,QtGui.QTableWidgetItem("{spar_div}".format(spar_div = spar_default_divpos[i_wing][i_spardiv])))
-                #桁剛性値サンプルのセット
-                eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(1,i_spardiv + 1,QtGui.QTableWidgetItem("{EI_sample}".format(EI_sample = EIsample_list[i_wing])))
-                #桁線密度サンプルのセット
-                eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(2,i_spardiv + 1,QtGui.QTableWidgetItem("{sigma_sample}".format(sigma_sample = sigmasample_list[i_wing])))
-
+            print(eisettingwidget.EIinputWidget)
+            if isinstance(eisettingwidget.EIinputWidget[i_wing].EIinputtable.item(0,2),type(None)):
+                #サンプル桁剛性値
+                EIsample_list = [34375000000,36671000000,16774000000,8305800000,1864800000]
+                if i_wing >= 5:
+                    EIsample_list.append(100000000)
+                #サンプル線密度
+                sigmasample_list = [0.377,0.357,0.284,0.245,0.0929]
+                if i_wing >= 5:
+                    sigmasample_list.append(0.0800)
+                #剛性設定ウィジットに表示する初期値のリスト
+                if i_wing != 0:
+                    spar_default_divpos[i_wing] = [(y_div[i_wing] - y_div[i_wing-1]) / 4,(y_div[i_wing] - y_div[i_wing-1]) / 2, (y_div[i_wing] - y_div[i_wing-1]) * 3 / 4, y_div[i_wing] - y_div[i_wing-1]]
+                else:
+                    spar_default_divpos[i_wing] = [(y_div[i_wing]) / 4,(y_div[i_wing]) / 2, (y_div[i_wing]) * 3 / 4,y_div[i_wing]]
+                for i_spardiv in range(4):
+                    eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(0,i_spardiv + 1,QtGui.QTableWidgetItem("{spar_div}".format(spar_div = spar_default_divpos[i_wing][i_spardiv])))
+                    #noneditableに
+                    eisettingwidget.EIinputWidget[i_wing].EIinputtable.item(0,i_spardiv + 1).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+                    #桁剛性値サンプルのセット
+                    eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(1,i_spardiv + 1,QtGui.QTableWidgetItem("{EI_sample}".format(EI_sample = EIsample_list[i_wing])))
+                    #桁線密度サンプルのセット
+                    eisettingwidget.EIinputWidget[i_wing].EIinputtable.setItem(2,i_spardiv + 1,QtGui.QTableWidgetItem("{sigma_sample}".format(sigma_sample = sigmasample_list[i_wing])))
         eisettingwidget.show()
 
     def resultshow():
@@ -325,6 +402,7 @@ def main():
     settingwidget = SettingWidget()
     resultvalwidget = ResultValWidget(settingwidget.tablewidget)
     eisettingwidget = EIsettingWidget(settingwidget.tablewidget)
+    eisettingwidget.EIsetting(settingwidget.tablewidget)
     TR797_opt = TR797_modified()
 
     mainpanel_layout = QtGui.QVBoxLayout()
