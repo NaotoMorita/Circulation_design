@@ -61,12 +61,29 @@ class ExeExportButton(QtGui.QWidget):
     def __init__(self, parent = None):
         QtGui.QWidget.__init__(self, parent = parent)
 
-        self.exebutton = QtGui.QPushButton("exe",parent = self)
-        self.exportbutton = QtGui.QPushButton("export",parent = self)
+        self.exebutton = QtGui.QPushButton("計算",parent = self)
+        self.exportbutton = QtGui.QPushButton("CSV出力",parent = self)
         self.do_stracutual = QtGui.QCheckBox("構造考慮",parent = self)
         self.do_stracutual.toggle()
+        self.progressbar = QtGui.QProgressBar(None)
+        DEFAULT_STYLE = """
+        QProgressBar{
+        border: 2px solid grey;
+        border-radius: 5px;
+        text-align: center
+        }
+
+        QProgressBar::chunk {
+        background-color: lightblue;
+        width: 10px;
+        margin: 1px;
+        }
+        """
+        self.progressbar.setStyleSheet(DEFAULT_STYLE)
+
         layout = QtGui.QHBoxLayout()
         layout.addStretch(1)
+        layout.addWidget(self.progressbar)
         layout.addWidget(self.do_stracutual)
         layout.addWidget(self.exebutton)
         layout.addWidget(self.exportbutton)
@@ -190,9 +207,23 @@ class SettingWidget(QtGui.QGroupBox):
 
 class ResultValWidget(QtGui.QGroupBox):
     def __init__(self, parent = None):
+        font = QtGui.QFont()
+        font.setPointSize(12)
+
         QtGui.QGroupBox.__init__(self, parent = parent)
         self.setTitle("計算結果")
+        self.liftresultlabel = QtGui.QLabel("計算揚力[kgf] : {Lift}".format(Lift = "--"),parent = self)
+        self.Diresultlabel = QtGui.QLabel("   抗力[N] : {Di}".format(Di = "--"),parent = self)
+        self.lambda1label = QtGui.QLabel("   構造制約係数λ1[-] : {lambda1}".format(lambda1 = "--"),parent = self)
+        self.lambda2label = QtGui.QLabel("   揚力制約係数λ2[-] : {lambda2}".format(lambda2 = "--"),parent = self)
 
+        self.layout = QtGui.QHBoxLayout()
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.liftresultlabel)
+        self.layout.addWidget(self.Diresultlabel)
+        self.layout.addWidget(self.lambda1label)
+        self.layout.addWidget(self.lambda2label)
+        self.setLayout(self.layout)
 
 class EIsettingWidget(QtGui.QDialog):
     def __init__(self, tablewidget, parent = None):
@@ -362,8 +393,8 @@ class TR797_modified():
         self.sigma_wire = self.sigma
         self.sigma_wire[self.Ndiv_wire] += float(settingwidget.lift_maxbending_input.forcewireinput.text()) / self.dS[self.Ndiv_wire] / 2
 
-    def matrix(self):
-        def calc_Q(y,z,phi,dS):
+    def matrix(self,progressbar):
+        def calc_Q(y,z,phi,dS,progressbar):
             Q_ij = numpy.zeros([len(y),len(y)])
             yd_ij = numpy.zeros([len(y),len(y)])
             zd_ij = numpy.zeros([len(y),len(y)])
@@ -382,6 +413,7 @@ class TR797_modified():
 
             for i in range (len(y)):
                 for j in range(len(y)):
+                    progressbar.setValue((i*len(y)+(j+1))/len(y)**2*100)
                     yd_ij[i,j] =  (y[i] - y[j]) * numpy.cos(phi[j]) + (z[i]-z[j]) * numpy.sin(phi[j])
                     zd_ij[i,j] = -(y[i] - y[j]) * numpy.sin(phi[j]) + (z[i]-z[j]) * numpy.cos(phi[j])
                     ydd_ij[i,j] = (y[i] + y[j]) * numpy.cos(phi[j]) - (z[i]-z[j]) * numpy.sin(phi[j])
@@ -401,7 +433,7 @@ class TR797_modified():
             return Q_ij
 
 
-        self.Q_ij = calc_Q(self.y,self.z,self.phi,self.dS)
+        self.Q_ij = calc_Q(self.y,self.z,self.phi,self.dS,progressbar)
         #-----多角形化行列
         self.polize_mat = numpy.zeros([len(self.y),self.n_section])
         for i in range(self.Ndiv_sec[1]):
@@ -488,6 +520,8 @@ class TR797_modified():
             A_val[A.shape[0]-1,0] = -self.C_val
 
             self.Optim_Answer = numpy.linalg.solve(A,A_val)
+            self.lambda1 = self.lambda2 = self.Optim_Answer[self.n_section-1,0]
+            self.lambda2 = self.Optim_Answer[self.n_section,0]
             self.gamma_opt = self.Optim_Answer[0:self.n_section,:]
 
         else:
@@ -504,6 +538,8 @@ class TR797_modified():
             A_val[A.shape[0]-1,0] = -self.C_val
 
             self.Optim_Answer = numpy.linalg.solve(A,A_val)
+            self.lambda1 = 0
+            self.lambda2 = self.Optim_Answer[self.n_section,0]
             self.gamma_opt = self.Optim_Answer[0:self.n_section,:]
 
         self.bending_mat = numpy.dot(self.v_mat,numpy.dot(self.vd_mat,numpy.dot(self.mo_mat,self.sh_mat)))
@@ -513,9 +549,10 @@ class TR797_modified():
         gamma = numpy.dot(self.polize_mat,self.gamma_opt)
         self.ind_vel = numpy.dot(self.Q_ij / 2 ,gamma)
         self.Di = 0
+        self.Lift = numpy.dot(self.C,self.gamma_opt)[0]
         for i in range(len(self.y)):
             self.Di += self.rho * self.ind_vel[i] * gamma[i] * self.dy * 2
-        print(self.Di)
+        self.Di = self.Di[0]
 
 
 
@@ -619,12 +656,20 @@ def main():
         resulttabwidget.ind_graph.axes.clear()
         resulttabwidget.ind_graph.drawplot(numpy.array(TR797_opt.y).T, numpy.arctan(-TR797_opt.ind_vel / TR797_opt.U) * 180 / numpy.pi , xlabel = "y[m]",ylabel = "induced angle[deg]")
 
+        resultvalwidget.liftresultlabel.setText("計算揚力[kgf] : {Lift}".format(Lift = numpy.round(TR797_opt.Lift / 9.8,3)))
+        resultvalwidget.Diresultlabel.setText("   抗力[N] : {Di}".format(Di = numpy.round(TR797_opt.Di,3)))
+        if exeexportbutton.do_stracutual.checkState() == 2:
+            resultvalwidget.lambda1label.setText("   構造制約係数λ1[-] : {lambda1}".format(lambda1 = numpy.round(TR797_opt.lambda1,3)))
+        else:
+            resultvalwidget.lambda1label.setText("   構造制約係数λ1[-] : {lambda1}".format(lambda1 = "--"))
+
+        resultvalwidget.lambda2label.setText("   揚力制約係数λ2[-] : {lambda2}".format(lambda2 = numpy.round(TR797_opt.lambda2,3)))
 
     def calculation():
         EIsetting_init()
         TR797_opt.__init__()
         TR797_opt.prepare(settingwidget,eisettingwidget)
-        TR797_opt.matrix()
+        TR797_opt.matrix(exeexportbutton.progressbar)
         TR797_opt.optimize(exeexportbutton.do_stracutual)
         resultshow()
 
