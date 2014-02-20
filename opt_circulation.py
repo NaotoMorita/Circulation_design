@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 class Dataplot(matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg):
     def __init__(self, parent=None, width=6, height=3, dpi=50):
         fig = matplotlib.figure.Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111,aspect='equal')
+        self.axes = fig.add_subplot(111)
         self.axes.tick_params(axis='both', which='major', labelsize=20)
         self.axes.hold(True)
 
@@ -31,7 +31,7 @@ class Dataplot(matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg):
         matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg.setSizePolicy(self,QtGui.QSizePolicy.Expanding,QtGui.QSizePolicy.Expanding)
         matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg.updateGeometry(self)
 
-    def drawplot(self,x,y,x2 = "None",y2 = "None",xlabel = "None",ylabel = "None",legend = "None"):
+    def drawplot(self,x,y,x2 = "None",y2 = "None",xlabel = "None",ylabel = "None",legend = "None", aspect = "equal"):
 
             self.axes.plot(x,y)
             if x2 != "None":
@@ -43,6 +43,9 @@ class Dataplot(matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg):
 
             if legend != "None":
                 self.axes.legend(legend,fontsize = 15)
+            if aspect =="equal":
+                self.axes.set_aspect("equal")
+
             self.draw()
 
 class ResultTabWidget(QtGui.QTabWidget):
@@ -51,11 +54,18 @@ class ResultTabWidget(QtGui.QTabWidget):
 
         self.circulation_graph = Dataplot()
         self.bending_graph     = Dataplot()
-        self.ind_graph     = Dataplot()
+        self.bendingangle_graph= Dataplot()
+        self.moment_graph      = Dataplot()
+        self.shforce_graph     = Dataplot()
+        self.ind_graph         = Dataplot()
 
         self.addTab(self.circulation_graph,"循環分布")
-        self.addTab(self.bending_graph,"たわみ")
         self.addTab(self.ind_graph,"誘導角度[deg]")
+        self.addTab(self.bending_graph,"たわみ(軸:等倍)")
+        self.addTab(self.bendingangle_graph,"たわみ角[deg]")
+        self.addTab(self.moment_graph,"曲げモーメント[N/m]")
+        self.addTab(self.shforce_graph,"せん断力[N]")
+
 
 class ExeExportButton(QtGui.QWidget):
     def __init__(self, parent = None):
@@ -150,11 +160,11 @@ class SettingWidget(QtGui.QGroupBox):
         self.strechwid = QtGui.QFrame(parent = self)
         self.tablewidget = QtGui.QTableWidget(parent = self.strechwid)
         #sizeの設定
-        self.tablewidget.setMaximumSize(1000,60)
-        self.tablewidget.setMinimumSize(600,60)
+        self.tablewidget.setMaximumSize(1000,100)
+        self.tablewidget.setMinimumSize(600,100)
         #行数、列数の設定
         self.tablewidget.setColumnCount(7)
-        self.tablewidget.setRowCount(1)
+        self.tablewidget.setRowCount(2)
         #タイトル付け
         self.tablewidget.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem(""))
         self.tablewidget.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem("第1翼"))
@@ -164,16 +174,17 @@ class SettingWidget(QtGui.QGroupBox):
         self.tablewidget.setHorizontalHeaderItem(5, QtGui.QTableWidgetItem("第5翼"))
         self.tablewidget.setHorizontalHeaderItem(6, QtGui.QTableWidgetItem("第6翼"))
         self.tablewidget.setItem(0,0,QtGui.QTableWidgetItem("各翼終端位置(mm)"))
+        self.tablewidget.setItem(1,0,QtGui.QTableWidgetItem("EI・線密度調整係数"))
         self.tablewidget.item(0,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
+        self.tablewidget.item(1,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
 
 
         #初期値を設定
         span_list = [2300,6900,10400,12400,16500,17000]
         for i in range(6):
-            if i != 0:
                 self.tablewidget.setItem(0,i + 1,QtGui.QTableWidgetItem("{default_span}".format(default_span = span_list[i])))
-            else:
-                self.tablewidget.setItem(0,i + 1,QtGui.QTableWidgetItem("{default_span}".format(default_span = span_list[i])))
+                self.tablewidget.setItem(1,i + 1,QtGui.QTableWidgetItem("1"))
+
 
 
 
@@ -362,23 +373,25 @@ class TR797_modified():
         n = 0
         for i_wings in range(self.n_section) :
             j = 1
+            coe_EI = float(settingwidget.tablewidget.item(1,i_wings + 1).text())
+            print(coe_EI)
             while True:
                 if i_wings == 0:
                     if round(self.y[n],4) < round(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(0,j).text()) / 1000 ,4):
-                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text()))
-                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text()))
+                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text()) * coe_EI)
+                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text()) *coe_EI)
                     else:
-                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text()))
-                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text()))
+                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text()) *coe_EI)
+                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text()) *coe_EI)
                         j = j + 1
 
                 elif i_wings != 0:
                     if round(self.y[n],4) < round(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(0,j).text()) / 1000 + self.y_section[i_wings-1],4):
-                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text()))
-                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text()))
+                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text())* coe_EI)
+                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text())* coe_EI)
                     else:
-                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text()))
-                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text()))
+                        self.EI.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(1,j).text())* coe_EI)
+                        self.sigma.append(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(2,j).text())* coe_EI)
                         j = j + 1
                 n = n + 1
                 if n == len(self.y):
@@ -543,15 +556,18 @@ class TR797_modified():
             self.gamma_opt = self.Optim_Answer[0:self.n_section,:]
 
         self.bending_mat = numpy.dot(self.v_mat,numpy.dot(self.vd_mat,numpy.dot(self.mo_mat,self.sh_mat)))
+        self.shearForce = numpy.dot(self.sh_mat,(numpy.dot(self.polize_mat,self.gamma_opt) - numpy.array([self.sigma_wire]).T / self.U / self.rho))
+        self.moment = numpy.dot(numpy.dot(self.mo_mat,self.sh_mat),(numpy.dot(self.polize_mat,self.gamma_opt) - numpy.array([self.sigma_wire]).T / self.U / self.rho))
+        self.bending_angle =numpy.dot(numpy.dot(self.vd_mat,numpy.dot(self.mo_mat,self.sh_mat)),(numpy.dot(self.polize_mat,self.gamma_opt) - numpy.array([self.sigma_wire]).T / self.U / self.rho))
         self.bending = numpy.dot(self.bending_mat,(numpy.dot(self.polize_mat,self.gamma_opt) - numpy.array([self.sigma_wire]).T / self.U / self.rho))
 
         calc_ellipticallift(self)
-        gamma = numpy.dot(self.polize_mat,self.gamma_opt)
-        self.ind_vel = numpy.dot(self.Q_ij / 2 ,gamma)
+        self.gamma = numpy.dot(self.polize_mat,self.gamma_opt)
+        self.ind_vel = numpy.dot(self.Q_ij / 2 ,self.gamma)
         self.Di = 0
         self.Lift = numpy.dot(self.C,self.gamma_opt)[0]
         for i in range(len(self.y)):
-            self.Di += self.rho * self.ind_vel[i] * gamma[i] * self.dy * 2
+            self.Di += self.rho * self.ind_vel[i] * self.gamma[i] * self.dy * 2
         self.Di = self.Di[0]
 
 
@@ -650,11 +666,17 @@ def main():
 
     def resultshow():
         resulttabwidget.circulation_graph.axes.clear()
-        resulttabwidget.circulation_graph.drawplot(numpy.array(TR797_opt.y).T,numpy.dot(TR797_opt.polize_mat,TR797_opt.gamma_opt),numpy.array(TR797_opt.y),TR797_opt.gamma_el,xlabel = "y[m]",ylabel = "gamma[m^2/s]",legend = ("optimized","elliptical"))
+        resulttabwidget.circulation_graph.drawplot(numpy.array(TR797_opt.y).T,numpy.dot(TR797_opt.polize_mat,TR797_opt.gamma_opt),numpy.array(TR797_opt.y),TR797_opt.gamma_el,xlabel = "y[m]",ylabel = "gamma[m^2/s]",legend = ("optimized","elliptical"),aspect = "auto")
         resulttabwidget.bending_graph.axes.clear()
         resulttabwidget.bending_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.bending,xlabel = "y[m]",ylabel = "bending[m]")
         resulttabwidget.ind_graph.axes.clear()
-        resulttabwidget.ind_graph.drawplot(numpy.array(TR797_opt.y).T, numpy.arctan(-TR797_opt.ind_vel / TR797_opt.U) * 180 / numpy.pi , xlabel = "y[m]",ylabel = "induced angle[deg]")
+        resulttabwidget.ind_graph.drawplot(numpy.array(TR797_opt.y).T, numpy.arctan(-TR797_opt.ind_vel / TR797_opt.U) * 180 / numpy.pi , xlabel = "y[m]",ylabel = "induced angle[deg]",aspect = "auto")
+        resulttabwidget.bendingangle_graph.axes.clear()
+        resulttabwidget.bendingangle_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.bending_angle * 180 / numpy.pi,xlabel = "y[m]",ylabel = "bending angle[deg]",aspect = "auto")
+        resulttabwidget.moment_graph.axes.clear()
+        resulttabwidget.moment_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.moment,xlabel = "y[m]",ylabel = "moment[N/m]",aspect = "auto")
+        resulttabwidget.shforce_graph.axes.clear()
+        resulttabwidget.shforce_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.shearForce,xlabel = "y[m]",ylabel = "shearforce[N]",aspect = "auto")
 
         resultvalwidget.liftresultlabel.setText("計算揚力[kgf] : {Lift}".format(Lift = numpy.round(TR797_opt.Lift / 9.8,3)))
         resultvalwidget.Diresultlabel.setText("   抗力[N] : {Di}".format(Di = numpy.round(TR797_opt.Di,3)))
@@ -672,6 +694,20 @@ def main():
         TR797_opt.matrix(exeexportbutton.progressbar)
         TR797_opt.optimize(exeexportbutton.do_stracutual)
         resultshow()
+
+    def exportCSV():
+        projectname = QtGui.QFileDialog.getSaveFileName(None, caption = "CSV出力",filter = "CSV(*.csv)")
+        fid = open(projectname,"w")
+        writecsv = csv.writer(fid,lineterminator = "\n")
+        writecsv.writerow(["循環分布最適化結果"])
+        writecsv.writerow(["スパン方向位置y[m]","循環[m^2/s]","誘導角度[deg]","たわみ[m]","たわみ角[deg]","曲げモーメント","せん断力","剛性","線密度"])
+        for n in range(len(TR797_opt.y)):
+            writecsv.writerow([TR797_opt.y[n],TR797_opt.gamma[n,0],numpy.arctan(TR797_opt.ind_vel[n,0] / TR797_opt.U)*180/numpy.pi,TR797_opt.bending[n,0],TR797_opt.bending_angle[n,0]*180/numpy.pi,TR797_opt.moment[n,0],TR797_opt.shearForce[n,0],TR797_opt.EI[n],TR797_opt.sigma[n]])
+        writecsv.writerow(["--"])
+        writecsv.writerow(["誘導速度行列Q(右から循環の縦ベクトルを掛ければ誘導速度になります"])
+        writecsv.writerows(TR797_opt.Q_ij/2)
+
+
 
     qApp = QtGui.QApplication(sys.argv)
 
@@ -711,6 +747,7 @@ def main():
     settingwidget.connect(settingwidget.tablewidget.deletecolumn,QtCore.SIGNAL('clicked()'),deletecolumn)
     settingwidget.connect(settingwidget.EIinput.EIinputbutton,QtCore.SIGNAL('clicked()'),EIsettingshow)
     exeexportbutton.connect(exeexportbutton.exebutton,QtCore.SIGNAL('clicked()'),calculation)
+    exeexportbutton.connect(exeexportbutton.exportbutton,QtCore.SIGNAL('clicked()'),exportCSV)
 
     sys.exit(qApp.exec_())
 
