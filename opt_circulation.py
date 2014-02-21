@@ -11,12 +11,12 @@
 
 import numpy, csv,copy
 
-import sys, os, random, copy
+import sys, os, copy
 from PyQt4 import QtGui, QtCore
 
 import matplotlib.backends.backend_qt4agg
 import matplotlib.backends.backend_agg
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 class Dataplot(matplotlib.backends.backend_qt4agg.FigureCanvasQTAgg):
     def __init__(self, parent=None, width=6, height=3, dpi=50):
@@ -225,6 +225,7 @@ class ResultValWidget(QtGui.QGroupBox):
         self.setTitle("計算結果")
         self.liftresultlabel = QtGui.QLabel("計算揚力[kgf] : {Lift}".format(Lift = "--"),parent = self)
         self.Diresultlabel = QtGui.QLabel("   抗力[N] : {Di}".format(Di = "--"),parent = self)
+        self.swresultlabel = QtGui.QLabel("   桁重量概算[kg] : {sw}".format(sw = "--"),parent = self)
         self.lambda1label = QtGui.QLabel("   構造制約係数λ1[-] : {lambda1}".format(lambda1 = "--"),parent = self)
         self.lambda2label = QtGui.QLabel("   揚力制約係数λ2[-] : {lambda2}".format(lambda2 = "--"),parent = self)
 
@@ -232,6 +233,7 @@ class ResultValWidget(QtGui.QGroupBox):
         self.layout.addStretch(1)
         self.layout.addWidget(self.liftresultlabel)
         self.layout.addWidget(self.Diresultlabel)
+        self.layout.addWidget(self.swresultlabel)
         self.layout.addWidget(self.lambda1label)
         self.layout.addWidget(self.lambda2label)
         self.setLayout(self.layout)
@@ -374,7 +376,6 @@ class TR797_modified():
         for i_wings in range(self.n_section) :
             j = 1
             coe_EI = float(settingwidget.tablewidget.item(1,i_wings + 1).text())
-            print(coe_EI)
             while True:
                 if i_wings == 0:
                     if round(self.y[n],4) < round(float(eisettingwidget.EIinputWidget[i_wings].EIinputtable.item(0,j).text()) / 1000 ,4):
@@ -403,7 +404,7 @@ class TR797_modified():
 
         self.spar_weight = numpy.sum(numpy.array(self.sigma) * numpy.array(self.dS) * 2) * 2
 
-        self.sigma_wire = self.sigma
+        self.sigma_wire = copy.deepcopy(self.sigma)
         self.sigma_wire[self.Ndiv_wire] += float(settingwidget.lift_maxbending_input.forcewireinput.text()) / self.dS[self.Ndiv_wire] / 2
 
     def matrix(self,progressbar):
@@ -585,6 +586,7 @@ def main():
         settingwidget.tablewidget.setColumnCount(insertnum + 1)
         settingwidget.tablewidget.setHorizontalHeaderItem(insertnum, QtGui.QTableWidgetItem("第{num}翼".format(num = insertnum)))
         settingwidget.tablewidget.setItem(0,insertnum,QtGui.QTableWidgetItem("{insertspar}".format(insertspar = float(settingwidget.tablewidget.item(0,insertnum-1).text()) + 2000)))
+        settingwidget.tablewidget.setItem(1,insertnum,QtGui.QTableWidgetItem("1"))
 
         i = insertnum-1
         eisettingwidget.EIinputWidget.append(QtGui.QGroupBox(parent = eisettingwidget))
@@ -628,12 +630,12 @@ def main():
 
     def deletecolumn():
         deletenum = settingwidget.tablewidget.columnCount()
-        if deletenum != 2:
+        if deletenum >= 3:
             settingwidget.tablewidget.setColumnCount(deletenum-1)
             hheader = settingwidget.tablewidget.horizontalHeader();
             hheader.setResizeMode(QtGui.QHeaderView.Stretch);
-        eisettingwidget.tabwidget.removeTab(deletenum-2)
-        eisettingwidget.EIinputWidget.pop(deletenum-2)
+            eisettingwidget.tabwidget.removeTab(deletenum-2)
+            eisettingwidget.EIinputWidget.pop(deletenum-2)
 
     def EIsettingshow():
         EIsetting_init()
@@ -680,6 +682,7 @@ def main():
 
         resultvalwidget.liftresultlabel.setText("計算揚力[kgf] : {Lift}".format(Lift = numpy.round(TR797_opt.Lift / 9.8,3)))
         resultvalwidget.Diresultlabel.setText("   抗力[N] : {Di}".format(Di = numpy.round(TR797_opt.Di,3)))
+        resultvalwidget.swresultlabel.setText("   桁重量概算[kg] : {sw}".format(sw = numpy.round(TR797_opt.spar_weight,3)))
         if exeexportbutton.do_stracutual.checkState() == 2:
             resultvalwidget.lambda1label.setText("   構造制約係数λ1[-] : {lambda1}".format(lambda1 = numpy.round(TR797_opt.lambda1,3)))
         else:
@@ -703,9 +706,10 @@ def main():
         writecsv.writerow(["スパン方向位置y[m]","循環[m^2/s]","誘導角度[deg]","たわみ[m]","たわみ角[deg]","曲げモーメント","せん断力","剛性","線密度"])
         for n in range(len(TR797_opt.y)):
             writecsv.writerow([TR797_opt.y[n],TR797_opt.gamma[n,0],numpy.arctan(TR797_opt.ind_vel[n,0] / TR797_opt.U)*180/numpy.pi,TR797_opt.bending[n,0],TR797_opt.bending_angle[n,0]*180/numpy.pi,TR797_opt.moment[n,0],TR797_opt.shearForce[n,0],TR797_opt.EI[n],TR797_opt.sigma[n]])
-        writecsv.writerow(["--"])
-        writecsv.writerow(["誘導速度行列Q(右から循環の縦ベクトルを掛ければ誘導速度になります"])
-        writecsv.writerows(TR797_opt.Q_ij/2)
+        #writecsv.writerow(["--"])
+        #writecsv.writerow(["誘導速度行列Q(右から循環の縦ベクトルを掛ければ誘導速度になります"])
+        #writecsv.writerows(TR797_opt.Q_ij/2)
+        fid.close()
 
 
 
