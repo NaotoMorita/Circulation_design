@@ -12,5 +12,5 @@ setup(
         name = "Circulation_Design",
         version = "0.10",
         options = {"build_exe": {"includes": includes}},
-        executables = [Executable("opt_circulation.py", base=base)],
+        executables = [Executable("Windmize.py", base=base)],
 )
