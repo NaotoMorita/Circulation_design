@@ -103,7 +103,7 @@ class ExeExportButton(QtGui.QWidget):
 class SettingWidget(QtGui.QGroupBox):
     def __init__(self, parent = None):
         QtGui.QGroupBox.__init__(self, parent = parent)
-        self.setTitle("設計変数 　※各翼終端位置は計算精度確保のため50mm単位で入力すること")
+        self.setTitle("設計変数 　※各翼終端位置は計算精度確保のためdyの整数倍の値とするとよい")
 
         #フォント設定
         font = QtGui.QFont()
@@ -116,6 +116,7 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input.wireposlabel = QtGui.QLabel("  ワイヤー取付位置(mm) : ", parent = self.lift_maxbending_input)
         self.lift_maxbending_input.forcewirelabel = QtGui.QLabel("  ワイヤー下向引張(N) : ", parent = self.lift_maxbending_input)
         self.lift_maxbending_input.velocitylabel = QtGui.QLabel("  速度(m/s) : ", parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.dylabel = QtGui.QLabel("  dy(mm) : ", parent = self.lift_maxbending_input)
 
         self.lift_maxbending_input.liftinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.liftinput.setFixedWidth(25)
@@ -132,6 +133,9 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input.forcewireinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.forcewireinput.setFixedWidth(25)
         self.lift_maxbending_input.forcewireinput.setText("485")
+        self.lift_maxbending_input.dyinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
+        self.lift_maxbending_input.dyinput.setFixedWidth(25)
+        self.lift_maxbending_input.dyinput.setText("50")
         self.lift_maxbending_input.layout = QtGui.QHBoxLayout()
         self.lift_maxbending_input.layout.addStretch(1)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.liftlabel)
@@ -144,12 +148,14 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.wireposinput)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.forcewirelabel)
         self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.forcewireinput)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.dylabel)
+        self.lift_maxbending_input.layout.addWidget(self.lift_maxbending_input.dyinput)
 
         self.lift_maxbending_input.setLayout(self.lift_maxbending_input.layout)
 
         #桁剛性をインプットするウィジットを開くボタン
         self.EIinput = QtGui.QFrame(parent = self)
-        self.EIinput.EIinputbutton = QtGui.QPushButton("EI setting",parent = self.EIinput)
+        self.EIinput.EIinputbutton = QtGui.QPushButton("桁詳細設定",parent = self.EIinput)
         self.EIinput.EIinputbutton.setFixedWidth(100)
         self.EIinput.layout = QtGui.QHBoxLayout()
         self.EIinput.layout.addStretch(1)
@@ -165,6 +171,7 @@ class SettingWidget(QtGui.QGroupBox):
         #行数、列数の設定
         self.tablewidget.setColumnCount(7)
         self.tablewidget.setRowCount(2)
+        self.tablewidget.resizeColumnToContents(100)
         #タイトル付け
         self.tablewidget.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem(""))
         self.tablewidget.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem("第1翼"))
@@ -173,8 +180,9 @@ class SettingWidget(QtGui.QGroupBox):
         self.tablewidget.setHorizontalHeaderItem(4, QtGui.QTableWidgetItem("第4翼"))
         self.tablewidget.setHorizontalHeaderItem(5, QtGui.QTableWidgetItem("第5翼"))
         self.tablewidget.setHorizontalHeaderItem(6, QtGui.QTableWidgetItem("第6翼"))
-        self.tablewidget.setItem(0,0,QtGui.QTableWidgetItem("各翼終端位置(mm)"))
-        self.tablewidget.setItem(1,0,QtGui.QTableWidgetItem("EI・線密度調整係数"))
+        self.tablewidget.setItem(0,0,QtGui.QTableWidgetItem("終端(mm)"))
+        self.tablewidget.item(0,0).setSizeHint(QtCore.QSize(200,200))
+        self.tablewidget.setItem(1,0,QtGui.QTableWidgetItem("調整係数"))
         self.tablewidget.item(0,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
         self.tablewidget.item(1,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
 
@@ -331,7 +339,13 @@ class TR797_modified():
         #誘導速度見積もり
         self.ind_vel = []
 
+        #計算中スイッチ
+        self.run = 1
+        #出力可能な値があるか
+        self.comp = 1
+
     def prepare(self,settingwidget,eisettingwidget):
+        self.dy = float(settingwidget.lift_maxbending_input.dyinput.text()) / 1000
         self.b = round(float(settingwidget.tablewidget.item(0,settingwidget.tablewidget.columnCount() - 1).text()) * 2 / 1000,4)
         self.n_section = int(settingwidget.tablewidget.columnCount()) - 1
         self.max_tawami = float(settingwidget.lift_maxbending_input.bendinginput.text()) / 1000
@@ -350,7 +364,7 @@ class TR797_modified():
             if round(self.y_div[i],4) > round(self.y_section[j]  - self.dy / 2,4) and round(self.y_div[i],4) <= round(self.y_section[j] + self.dy / 2,4):
                 self.Ndiv_sec.append(i)
                 j = j + 1
-            if self.y_div[i] == self.y_wire:
+            if round(self.y_div[i],4) > round(self.y_wire  - self.dy / 2,4) and round(self.y_div[i],4) <= round(self.y_wire + self.dy / 2,4):
                 self.Ndiv_wire = i
 
             if j == self.n_section:
@@ -407,7 +421,7 @@ class TR797_modified():
         self.sigma_wire = copy.deepcopy(self.sigma)
         self.sigma_wire[self.Ndiv_wire] += float(settingwidget.lift_maxbending_input.forcewireinput.text()) / self.dS[self.Ndiv_wire] / 2
 
-    def matrix(self,progressbar):
+    def matrix(self,progressbar,qApp):
         def calc_Q(y,z,phi,dS,progressbar):
             Q_ij = numpy.zeros([len(y),len(y)])
             yd_ij = numpy.zeros([len(y),len(y)])
@@ -426,7 +440,12 @@ class TR797_modified():
             Q_ij_4 = numpy.zeros([len(y),len(y)])
 
             for i in range (len(y)):
+                #中止フラグを検知
+                if self.run == 1:
+                    break
+
                 for j in range(len(y)):
+                    qApp.processEvents()
                     progressbar.setValue((i*len(y)+(j+1))/len(y)**2*100)
                     yd_ij[i,j] =  (y[i] - y[j]) * numpy.cos(phi[j]) + (z[i]-z[j]) * numpy.sin(phi[j])
                     zd_ij[i,j] = -(y[i] - y[j]) * numpy.sin(phi[j]) + (z[i]-z[j]) * numpy.cos(phi[j])
@@ -691,32 +710,105 @@ def main():
         resultvalwidget.lambda2label.setText("   揚力制約係数λ2[-] : {lambda2}".format(lambda2 = numpy.round(TR797_opt.lambda2,3)))
 
     def calculation():
-        EIsetting_init()
-        TR797_opt.__init__()
-        TR797_opt.prepare(settingwidget,eisettingwidget)
-        TR797_opt.matrix(exeexportbutton.progressbar)
-        TR797_opt.optimize(exeexportbutton.do_stracutual)
-        resultshow()
+        if TR797_opt.run == 1:
+            exeexportbutton.exebutton.setText("計算中止")
+            EIsetting_init()
+            TR797_opt.__init__()
+            TR797_opt.prepare(settingwidget,eisettingwidget)
+            TR797_opt.run = 0
+            TR797_opt.matrix(exeexportbutton.progressbar,qApp)
+            if TR797_opt.run == 0:
+                TR797_opt.optimize(exeexportbutton.do_stracutual)
+                resultshow()
+                TR797_opt.comp = 0
+            TR797_opt.run = 1
+            exeexportbutton.exebutton.setText("計算")
+        else:
+            TR797_opt.run = 1
+            exeexportbutton.exebutton.setText("計算")
 
     def exportCSV():
-        projectname = QtGui.QFileDialog.getSaveFileName(None, caption = "CSV出力",filter = "CSV(*.csv)")
-        fid = open(projectname,"w")
-        writecsv = csv.writer(fid,lineterminator = "\n")
-        writecsv.writerow(["循環分布最適化結果"])
-        writecsv.writerow(["スパン方向位置y[m]","循環[m^2/s]","誘導角度[deg]","たわみ[m]","たわみ角[deg]","曲げモーメント","せん断力","剛性","線密度"])
-        for n in range(len(TR797_opt.y)):
-            writecsv.writerow([TR797_opt.y[n],TR797_opt.gamma[n,0],numpy.arctan(TR797_opt.ind_vel[n,0] / TR797_opt.U)*180/numpy.pi,TR797_opt.bending[n,0],TR797_opt.bending_angle[n,0]*180/numpy.pi,TR797_opt.moment[n,0],TR797_opt.shearForce[n,0],TR797_opt.EI[n],TR797_opt.sigma[n]])
-        #writecsv.writerow(["--"])
-        #writecsv.writerow(["誘導速度行列Q(右から循環の縦ベクトルを掛ければ誘導速度になります"])
-        #writecsv.writerows(TR797_opt.Q_ij/2)
-        fid.close()
+        #出力可能な計算結果があるかチェック
+        if TR797_opt.comp == 0:
+            projectname = QtGui.QFileDialog.getSaveFileName(None, caption = "計算結果出力",filter = "CSV(*.csv)")
+            if len(projectname) != 0:
+                try:
+                    fid = open(projectname,"w")
+                    writecsv = csv.writer(fid,lineterminator = "\n")
+                    writecsv.writerow(["循環分布最化結果"])
+                    writecsv.writerow(["揚力[kgf]",numpy.round(TR797_opt.Lift / 9.8,3)])
+                    writecsv.writerow(["抗力[N]",numpy.round(TR797_opt.Di,3)])
+                    writecsv.writerow(["桁重量概算[kg]",numpy.round(TR797_opt.spar_weight,3)])
+                    if exeexportbutton.do_stracutual.checkState() == 2:
+                        writecsv.writerow(["構造制約係数[-]",numpy.round(TR797_opt.lambda1,3)])
+                    else:
+                        writecsv.writerow(["構造制約係数[-]","--"])
+                    writecsv.writerow(["揚力制約係数[-]",numpy.round(TR797_opt.lambda2,3)])
+                    writecsv.writerow([])
+                    writecsv.writerow(["以下 翼セクションでの値"])
+                    writecsv.writerow(["スパン方向位置y[m]","循環[m^2/s]"])
+                    writebuff = numpy.hstack([numpy.array([TR797_opt.y_section]).T,TR797_opt.gamma_opt])
+                    for n in range(len(TR797_opt.y_section)):
+                        writecsv.writerow([writebuff[n,0],writebuff[n,1]])
+                    writecsv.writerow([])
+                    writecsv.writerow(["以下 翼素Control Point(翼素中心）での値"])
+                    writecsv.writerow(["スパン方向位置y[m]","循環[m^2/s]","誘導角度[deg]","たわみ[m]","たわみ角[deg]","曲げモーメント","せん断力","剛性","線密度"])
+                    for n in range(len(TR797_opt.y)):
+                        writecsv.writerow([TR797_opt.y[n],TR797_opt.gamma[n,0],numpy.arctan(TR797_opt.ind_vel[n,0] / TR797_opt.U)*180/numpy.pi,TR797_opt.bending[n,0],TR797_opt.bending_angle[n,0]*180/numpy.pi,TR797_opt.moment[n,0],TR797_opt.shearForce[n,0],TR797_opt.EI[n],TR797_opt.sigma[n]])
+                    fid.close()
+                except:
+                    QtGui.QMessageBox.warning(None,"Error","CSV出力に失敗しました。\n同名のCSVファイルを他アプリケーションで開いている場合は閉じてみてください。")
+
+        else:
+            QtGui.QMessageBox.warning(None,"Error","計算が完了していません")
 
 
+    def about_Windmize():
+        QtGui.QMessageBox.about(None,"About Windmize","".join(["<h2>Windmize 1.00</h2>",
+                                               "<p>Copyright (C) 2014 Naoto Morita",
+                                               "<p>Windmize is without any warranty. This program has been developed excusively for the design of airfoil. Any other usage is strongly disapproved.</p>"
+                                               "<p>Windmize distributed under the GNU General Public Licence</p>"]))
 
     qApp = QtGui.QApplication(sys.argv)
+    qApp.setWindowIcon(QtGui.QIcon('WM.ico'))
+
+    #スプラッシュウィンドウの表示
+    splash = QtGui.QSplashScreen()
+    splash.setPixmap(QtGui.QPixmap("WM_splash.png"))
+    splash.show()
 
     mainwindow = QtGui.QMainWindow()
     mainpanel = QtGui.QWidget()
+    mainwindow.setWindowTitle("Windmize")
+
+
+    #メニューバーの作成
+    menubar = mainwindow.menuBar()
+    filemenu = menubar.addMenu("File")
+    file_new = filemenu.addAction("ファイルI/O未実装")
+    #file_new.setShortcut('Ctrl+N')
+    #file_open = filemenu.addAction("&Open")
+    #file_open.setShortcut('Ctrl+O')
+    #file_save = filemenu.addAction("&Save")
+    #file_save.setShortcut('Ctrl+S')
+    #file_saveas = filemenu.addAction("&Save as")
+
+    #main_window.connect(file_new,QtCore.SIGNAL('triggered()'),new)
+    #main_window.connect(file_save,QtCore.SIGNAL('triggered()'),save)
+    #main_window.connect(file_saveas,QtCore.SIGNAL('triggered()'),save_as)
+    #main_window.connect(file_open,QtCore.SIGNAL('triggered()'),openif)
+
+    optionmenu = menubar.addMenu("Option")
+    defaultsetting = optionmenu.addAction("初期設定化未実装")
+    #main_window.connect(defaultfoils,QtCore.SIGNAL('triggered()'),default.dialog.activateWindow)
+    #main_window.connect(defaultfoils,QtCore.SIGNAL('triggered()'),default.dialog.show)
+
+    aboutmenu = menubar.addMenu("About")
+    about_XGAGmenu = aboutmenu.addAction("&About Windmize")
+    about_qt = aboutmenu.addAction("&About Qt")
+
+    mainwindow.connect(about_qt,QtCore.SIGNAL('triggered()'),qApp.aboutQt)
+    mainwindow.connect(about_XGAGmenu,QtCore.SIGNAL('triggered()'),about_Windmize)
 
     resulttabwidget = ResultTabWidget()
     exeexportbutton = ExeExportButton()
@@ -745,7 +837,7 @@ def main():
     mainpanel.setLayout(mainpanel_layout)
     mainwindow.setCentralWidget(mainpanel)
 
-    mainwindow.show()
+
 
     settingwidget.connect(settingwidget.tablewidget.insertcolumn,QtCore.SIGNAL('clicked()'),insertcolumn)
     settingwidget.connect(settingwidget.tablewidget.deletecolumn,QtCore.SIGNAL('clicked()'),deletecolumn)
@@ -753,6 +845,8 @@ def main():
     exeexportbutton.connect(exeexportbutton.exebutton,QtCore.SIGNAL('clicked()'),calculation)
     exeexportbutton.connect(exeexportbutton.exportbutton,QtCore.SIGNAL('clicked()'),exportCSV)
 
+    mainwindow.show()
+    splash.finish(mainwindow)
     sys.exit(qApp.exec_())
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ if sys.platform == "win32":
         base = "Win32GUI"
 
 includes = ["PyQt4.QtCore", "PyQt4.QtGui", "re","numpy","matplotlib.backends.backend_qt4agg","matplotlib.backends.backend_agg","matplotlib.backends.backend_tkagg"]
-includefiles = ["WM_splash.png","WM.ico"]
+
 exe = Executable(script = "Windmize.py",
                  base   = base,
                  icon   = "WM.ico")
@@ -16,6 +16,6 @@ setup(
         name = "Windmize",
         version = "1.00",
         description = 'Circulation Desingn',
-        options = {"build_exe": {"includes": includes,"include_files":includefiles}},
+        options = {"build_exe": {"includes": includes}},
         executables = [exe],
 )
