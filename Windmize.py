@@ -63,7 +63,7 @@ class ResultTabWidget(QtGui.QTabWidget):
         self.addTab(self.ind_graph,"誘導角度[deg]")
         self.addTab(self.bending_graph,"たわみ(軸:等倍)")
         self.addTab(self.bendingangle_graph,"たわみ角[deg]")
-        self.addTab(self.moment_graph,"曲げモーメント[N/m]")
+        self.addTab(self.moment_graph,"曲げモーメント[N・m]")
         self.addTab(self.shforce_graph,"せん断力[N]")
 
 
@@ -620,7 +620,7 @@ def main():
         vheader.setResizeMode(QtGui.QHeaderView.Stretch)
 
         eisettingwidget.EIinputWidget[i].EIinputtable.setItem(0,0,QtGui.QTableWidgetItem("翼区切終端[mm]"))
-        eisettingwidget.EIinputWidget[i].EIinputtable.setItem(1,0,QtGui.QTableWidgetItem("EI"))
+        eisettingwidget.EIinputWidget[i].EIinputtable.setItem(1,0,QtGui.QTableWidgetItem("EI[N・mm^2]"))
         eisettingwidget.EIinputWidget[i].EIinputtable.setItem(2,0,QtGui.QTableWidgetItem("線密度[kg/m]"))
         eisettingwidget.EIinputWidget[i].EIinputtable.item(0,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
         eisettingwidget.EIinputWidget[i].EIinputtable.item(1,0).setFlags(QtCore.Qt.ItemIsSelectable |  QtCore.Qt.ItemIsEnabled)
@@ -695,7 +695,7 @@ def main():
         resulttabwidget.bendingangle_graph.axes.clear()
         resulttabwidget.bendingangle_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.bending_angle * 180 / numpy.pi,xlabel = "y[m]",ylabel = "bending angle[deg]",aspect = "auto")
         resulttabwidget.moment_graph.axes.clear()
-        resulttabwidget.moment_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.moment,xlabel = "y[m]",ylabel = "moment[N/m]",aspect = "auto")
+        resulttabwidget.moment_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.moment,xlabel = "y[m]",ylabel = "moment[Nm]",aspect = "auto")
         resulttabwidget.shforce_graph.axes.clear()
         resulttabwidget.shforce_graph.drawplot(numpy.array(TR797_opt.y).T,TR797_opt.shearForce,xlabel = "y[m]",ylabel = "shearforce[N]",aspect = "auto")
 
@@ -752,7 +752,7 @@ def main():
                         writecsv.writerow([writebuff[n,0],writebuff[n,1]])
                     writecsv.writerow([])
                     writecsv.writerow(["以下 翼素Control Point(翼素中心）での値"])
-                    writecsv.writerow(["スパン方向位置y[m]","循環[m^2/s]","誘導角度[deg]","たわみ[m]","たわみ角[deg]","曲げモーメント","せん断力","剛性","線密度"])
+                    writecsv.writerow(["スパン方向位置y[m]","循環[m^2/s]","誘導角度[deg]","たわみ[m]","たわみ角[deg]","曲げモーメント[N・m]","せん断力[N]","剛性[N・mm^2]","線密度[kg/m]"])
                     for n in range(len(TR797_opt.y)):
                         writecsv.writerow([TR797_opt.y[n],TR797_opt.gamma[n,0],numpy.arctan(TR797_opt.ind_vel[n,0] / TR797_opt.U)*180/numpy.pi,TR797_opt.bending[n,0],TR797_opt.bending_angle[n,0]*180/numpy.pi,TR797_opt.moment[n,0],TR797_opt.shearForce[n,0],TR797_opt.EI[n],TR797_opt.sigma[n]])
                     fid.close()
@@ -766,7 +766,7 @@ def main():
     def about_Windmize():
         QtGui.QMessageBox.about(None,"About Windmize","".join(["<h2>Windmize 1.00</h2>",
                                                "<p>Copyright (C) 2014 Naoto Morita",
-                                               "<p>Windmize is without any warranty. This program has been developed excusively for the design of airfoil. Any other usage is strongly disapproved.</p>"
+                                               "<p>Windmize is without any warranty. This program has been developed excusively for the design of aerowings. Any other usage is strongly disapproved.</p>"
                                                "<p>Windmize distributed under the GNU General Public Licence</p>"]))
 
     qApp = QtGui.QApplication(sys.argv)
