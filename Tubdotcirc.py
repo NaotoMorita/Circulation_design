@@ -419,9 +419,8 @@ class TR797_modified():
         self.spar_weight = numpy.sum(numpy.array(self.sigma) * numpy.array(self.dS) * 2) * 2
 
         self.sigma_wire = copy.deepcopy(self.sigma)
-        for i in range(len(self.y)):
-            self.sigma_wire[i] *= 9.8
         self.sigma_wire[self.Ndiv_wire] += float(settingwidget.lift_maxbending_input.forcewireinput.text()) / self.dS[self.Ndiv_wire] / 2
+
     def matrix(self,progressbar,qApp):
         def calc_Q(y,z,phi,dS,progressbar):
             Q_ij = numpy.zeros([len(y),len(y)])
@@ -478,6 +477,9 @@ class TR797_modified():
             for i in range(self.Ndiv_sec[j-1] + 1, self.Ndiv_sec[j] + 1):
                 self.polize_mat[i,j-1]   =  -(self.y[i]-self.y_section[j])   / (self.y_section[j]-self.y_section[j-1])
                 self.polize_mat[i,j]     =   (self.y[i]-self.y_section[j-1]) / (self.y_section[j]-self.y_section[j-1])
+
+        for i in range(self.Ndiv_sec[2]-self.Ndiv_sec[1]):
+            self.polize_mat[i,2]           = 1
 
         #積分によりせん断力Qを求める
         self.sh_mat = numpy.zeros([len(self.y),len(self.y)])
