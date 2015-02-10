@@ -132,7 +132,7 @@ class SettingWidget(QtGui.QGroupBox):
         self.lift_maxbending_input.wireposinput.setText("6550")
         self.lift_maxbending_input.forcewireinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.forcewireinput.setFixedWidth(25)
-        self.lift_maxbending_input.forcewireinput.setText("485")
+        self.lift_maxbending_input.forcewireinput.setText("370")
         self.lift_maxbending_input.dyinput = QtGui.QLineEdit(parent = self.lift_maxbending_input)
         self.lift_maxbending_input.dyinput.setFixedWidth(25)
         self.lift_maxbending_input.dyinput.setText("50")
