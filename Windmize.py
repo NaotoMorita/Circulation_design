@@ -6,7 +6,11 @@
 #
 # Created:     09/12/2013
 # Copyright:   (c) NaotoMORITA 2013
-# Licence:     <your licence>
+# Licence:         Windmize
+#                  Copyright (C) 2014 Naoto Morita
+#                  Windmize is without any warranty. This program has been developed excusively for the design of aerowings.
+#                  Any other usage is strongly disapproved.
+#                  Windmize distributed under the GNU General Public Licence
 #-------------------------------------------------------------------------------
 
 import numpy, csv,copy
